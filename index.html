@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Panic Cam - Universal Companion</title>
+    <title>Panic Cam - Precision Edition</title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, sans-serif; }
         body { background-color: #0e1117; color: #fff; display: flex; flex-direction: column; align-items: center; justify-content: space-between; min-height: 100vh; padding: 20px; }
@@ -22,7 +22,6 @@
         .status-badge { display: inline-block; padding: 6px 12px; border-radius: 20px; font-size: 0.85rem; font-weight: bold; margin-top: 8px; background: #21262d; color: #8b949e; }
         .status-badge.connected { background: rgba(46, 160, 67, 0.2); color: #3fb950; border: 1px solid #2ea043; }
 
-        /* ESTADO EMOCIONAL */
         .state-container { margin: 15px 0; padding: 12px; border-radius: 8px; background: #0d1117; border: 1px solid #30363d; }
         .state-title { font-size: 0.8rem; color: #8b949e; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px; }
         .state-display { font-size: 1.3rem; font-weight: bold; color: #3fb950; transition: all 0.3s ease; }
@@ -30,7 +29,6 @@
         
         @keyframes pulse { from { transform: scale(1); } to { transform: scale(1.05); } }
 
-        /* BOTÓN DE PÁNICO FORZADO */
         .panic-btn { width: 100%; padding: 14px; margin-top: 10px; border-radius: 8px; font-size: 1.1rem; font-weight: 800; border: none; cursor: pointer; background: #30363d; color: #c9d1d9; transition: all 0.3s ease; }
         .panic-btn.active { background: #ff2a2a; color: #fff; box-shadow: 0 0 20px rgba(255, 42, 42, 0.8); animation: shake 0.3s infinite; }
 
@@ -43,7 +41,6 @@
         footer a { color: #58a6ff; text-decoration: none; font-weight: 600; margin: 0 4px; }
     </style>
 
-    <!-- LIBRERÍAS DE MEDIAPIPE DE GOOGLE PARA DETECCIÓN FACIAL REAL -->
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js" crossorigin="anonymous"></script>
 </head>
@@ -56,7 +53,7 @@
 
     <div class="container">
         <div class="platform-info">
-            📱 <strong>Detección Facial Inteligente Activa.</strong>
+            🎯 <strong>Detección por Proporción Facial Activa.</strong>
         </div>
 
         <div class="pin-box">
@@ -68,13 +65,11 @@
             <div id="statusBadge" class="status-badge">Esperando PIN del juego...</div>
         </div>
 
-        <!-- INDICADOR DE ESTADO -->
         <div class="state-container">
             <div class="state-title">Estado de la Mente</div>
             <div id="stateDisplay" class="state-display">Iniciando IA... 🤖</div>
         </div>
 
-        <!-- BOTÓN DE PÁNICO FORZADO -->
         <button id="panicToggleBtn" class="panic-btn" onclick="toggleForcedPanic()">😱 FORZAR PÁNICO (OFF)</button>
 
         <div class="video-container">
@@ -170,7 +165,6 @@
                 isPanicHoldActive = true;
                 if (panicTimeout) clearTimeout(panicTimeout);
                 
-                // Mantiene el PÁNICO 3 segundos exactos
                 panicTimeout = setTimeout(() => {
                     isPanicHoldActive = false;
                     actualizarEstado("Tranquilo 😌");
@@ -204,9 +198,9 @@
         }
 
         // ==========================================
-        // SISTEMA DE IA RECONOCIMIENTO FACIAL REAL
+        // DETECCIÓN BASADA EN PROPORCIONES RELATIVAS
         // ==========================================
-        let lastNoseY = null;
+        let prevHeadPos = null;
 
         function dist(p1, p2) {
             return Math.hypot(p1.x - p2.x, p1.y - p2.y);
@@ -215,43 +209,48 @@
         function onResults(results) {
             if (forcedPanic) return;
 
-            // SI TE TAPÁS LA CARA O TE TIRÁS TAN ATRÁS QUE LA IA PIERDE EL ROSTRO DE GOLPE -> ¡PÁNICO!
+            // Si tapás la cara con las manos o desaparece por el susto -> Pánico inmediato
             if (!results.multiFaceLandmarks || results.multiFaceLandmarks.length === 0) {
                 actualizarEstado("¡PÁNICO! 😱", true);
-                lastNoseY = null;
+                prevHeadPos = null;
                 return;
             }
 
-            const landmarks = results.multiFaceLandmarks[0];
+            const lm = results.multiFaceLandmarks[0];
 
-            // Puntos clave de la cara:
-            const labioSuperior = landmarks[13];
-            const labioInferior = landmarks[14];
-            const ojoIzquierdoTop = landmarks[159];
-            const ojoIzquierdoBot = landmarks[145];
-            const nariz = landmarks[1];
+            // 1. Calculamos el tamaño relativo de la cara (Distancia entre mentón y frente)
+            const altoCara = dist(lm[10], lm[152]); 
+            if (altoCara === 0) return;
 
-            // 1. Apertura de boca (Boca abierta de susto)
-            const aperturaBoca = dist(labioSuperior, labioInferior);
-            
-            // 2. Ojos desorbitados
-            const aperturaOjo = dist(ojoIzquierdoTop, ojoIzquierdoBot);
+            // 2. Proporción de apertura de boca relativa a la cara
+            const aperturaBocaAbsoluta = dist(lm[13], lm[14]);
+            const ratioBoca = aperturaBocaAbsoluta / altoCara;
 
-            // 3. Movimiento de espasmo vertical (tirarse para atrás / sobresalto rápido)
-            let espasmo = false;
-            if (lastNoseY !== null) {
-                const diffY = Math.abs(nariz.y - lastNoseY);
-                if (diffY > 0.035) { // Movimiento brusco de cabeza hacia arriba/abajo/atrás
-                    espasmo = true;
+            // 3. Proporción de ojos desorbitados (promedio ambos ojos)
+            const ojoIzk = dist(lm[159], lm[145]);
+            const ojoDer = dist(lm[386], lm[374]);
+            const ratioOjos = ((ojoIzk + ojoDer) / 2) / altoCara;
+
+            // 4. Espasmo / Sacudida brusca de cabeza (velocidad de traslación del centro facial)
+            const centroCaraActual = { x: lm[1].x, y: lm[1].y };
+            let espasmoBrusco = false;
+
+            if (prevHeadPos) {
+                const desplazamiento = dist(centroCaraActual, prevHeadPos) / altoCara;
+                // Si el desplazamiento de la cara supera el 18% del tamaño de tu rostro en 1 frame
+                if (desplazamiento > 0.18) {
+                    espasmoBrusco = true;
                 }
             }
-            lastNoseY = nariz.y;
+            prevHeadPos = centroCaraActual;
 
-            // --- DETECCIÓN DE PÁNICO ULTRA SENSIBLE ---
-            // Se activa si: abrís la boca un poco (0.025), abrís grande los ojos, o hacés un espasmo
-            if (aperturaBoca > 0.025 || aperturaOjo > 0.030 || espasmo) {
+            // --- REGLAS DE ACTIVACIÓN SENSIBLES Y PRECISAS ---
+            // ratioBoca > 0.12 = Abrir boca en gesto de susto/sorpresa
+            // ratioOjos > 0.10 = Abrir grande los ojos
+            // espasmoBrusco = Sacudida o tirarse para atrás de golpe
+            if (ratioBoca > 0.12 || ratioOjos > 0.10 || espasmoBrusco) {
                 actualizarEstado("¡PÁNICO! 😱", true);
-            } else if (aperturaBoca > 0.015) {
+            } else if (ratioBoca > 0.07) {
                 actualizarEstado("Concentrado 🧐");
             } else {
                 actualizarEstado("Tranquilo 😌");
