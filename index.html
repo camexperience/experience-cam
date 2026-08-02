@@ -64,11 +64,13 @@
             <div id="statusBadge" class="status-badge">Esperando PIN del juego...</div>
         </div>
 
+        <!-- INDICADOR DE ESTADO -->
         <div class="state-container">
             <div class="state-title">Estado de la Mente</div>
             <div id="stateDisplay" class="state-display">Tranquilo 😌</div>
         </div>
 
+        <!-- BOTÓN DE PÁNICO FORZADO -->
         <button id="panicToggleBtn" class="panic-btn" onclick="toggleForcedPanic()">😱 FORZAR PÁNICO (OFF)</button>
 
         <div class="video-container">
@@ -85,6 +87,8 @@
     </footer>
 
     <script>
+        const RENDER_URL = "https://tu-app-en-render.onrender.com"; // 👈 Cambiá esto por tu URL real de Render
+
         const video = document.getElementById('webcam');
         const statusBadge = document.getElementById('statusBadge');
         const stateDisplay = document.getElementById('stateDisplay');
@@ -104,17 +108,42 @@
             }
         }
 
-        function vincularPIN() {
+        async function vincularPIN() {
             const pin = document.getElementById('pinInput').value.trim();
             if (pin.length < 4) {
-                alert("Ingresá un PIN válido de al menos 4 dígitos.");
+                alert("Por favor ingresá un PIN válido de al menos 4 dígitos.");
                 return;
             }
 
-            activePIN = pin;
-            isConnected = true;
-            statusBadge.classList.add('connected');
-            statusBadge.innerText = "🟢 Conectado con éxito al PIN: " + activePIN;
+            statusBadge.className = "status-badge";
+            statusBadge.style.color = "#8b949e";
+            statusBadge.innerText = "🟡 Validando PIN con el servidor...";
+
+            try {
+                const response = await fetch(`${RENDER_URL}/api/link-pin`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ pin: pin })
+                });
+
+                const data = await response.json();
+
+                if (response.ok && data.success) {
+                    activePIN = pin;
+                    isConnected = true;
+                    statusBadge.className = "status-badge connected";
+                    statusBadge.innerText = "🟢 ¡Cámara Vinculada al PIN: " + activePIN + "!";
+                } else {
+                    statusBadge.className = "status-badge";
+                    statusBadge.style.color = "#ff2a2a";
+                    statusBadge.innerText = "❌ PIN incorrecto o inexistente. Intenta de nuevo.";
+                }
+            } catch (err) {
+                console.error("Error al conectar con Render:", err);
+                statusBadge.className = "status-badge";
+                statusBadge.style.color = "#ff2a2a";
+                statusBadge.innerText = "⚠️ Error de conexión con el servidor.";
+            }
         }
 
         function toggleForcedPanic() {
@@ -157,11 +186,11 @@
 
                 if (lastImageData) {
                     let diff = 0;
-                    for (let i = 0; i < currentData.length; i += 16) { // Muestra de píxeles
+                    for (let i = 0; i < currentData.length; i += 16) {
                         diff += Math.abs(currentData[i] - lastImageData[i]);
                     }
 
-                    // Sensibilidad mucho menos estricta (umbral más bajo)
+                    // Sensibilidad suelta (umbral más bajo)
                     if (diff > 180000) {
                         actualizarEstado("¡PÁNICO! 😱");
                     } else if (diff > 80000) {
