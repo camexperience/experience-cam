@@ -36,12 +36,16 @@
 
         @keyframes shake { 0% { transform: translate(1px, 1px) rotate(0deg); } 20% { transform: translate(-2px, 0px) rotate(-1deg); } 40% { transform: translate(1px, -1px) rotate(1deg); } 60% { transform: translate(-1px, 1px) rotate(0deg); } 80% { transform: translate(2px, 1px) rotate(1deg); } 100% { transform: translate(1px, -2px) rotate(-1deg); } }
 
-        .video-container { width: 100%; height: 200px; background: #000; border-radius: 8px; overflow: hidden; margin-top: 15px; border: 1px solid #30363d; position: relative; }
+        .video-container { width: 100%; height: 220px; background: #000; border-radius: 8px; overflow: hidden; margin-top: 15px; border: 1px solid #30363d; position: relative; }
         video { width: 100%; height: 100%; object-fit: cover; }
         
         footer { margin-top: 20px; text-align: center; font-size: 0.8rem; color: #8b949e; width: 100%; border-top: 1px solid #21262d; padding-top: 12px; }
         footer a { color: #58a6ff; text-decoration: none; font-weight: 600; margin: 0 4px; }
     </style>
+
+    <!-- LIBRERÍAS DE MEDIAPIPE DE GOOGLE PARA DETECCIÓN FACIAL REAL -->
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js" crossorigin="anonymous"></script>
 </head>
 <body>
 
@@ -52,7 +56,7 @@
 
     <div class="container">
         <div class="platform-info">
-            📱 <strong>Compatible con Celulares, PC y Consolas.</strong>
+            📱 <strong>Detección Facial Inteligente Activa.</strong>
         </div>
 
         <div class="pin-box">
@@ -67,7 +71,7 @@
         <!-- INDICADOR DE ESTADO -->
         <div class="state-container">
             <div class="state-title">Estado de la Mente</div>
-            <div id="stateDisplay" class="state-display">Tranquilo 😌</div>
+            <div id="stateDisplay" class="state-display">Iniciando IA... 🤖</div>
         </div>
 
         <!-- BOTÓN DE PÁNICO FORZADO -->
@@ -99,18 +103,8 @@
         let forcedPanic = false;
         let currentState = "Tranquilo";
         
-        // Control del temporizador de retención de pánico (3 segundos)
         let panicTimeout = null;
         let isPanicHoldActive = false;
-
-        async function startCamera() {
-            try {
-                const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" }, audio: false });
-                video.srcObject = stream;
-            } catch (err) {
-                console.error("Cámara no disponible o denegada:", err);
-            }
-        }
 
         async function vincularPIN() {
             const pin = document.getElementById('pinInput').value.trim();
@@ -168,7 +162,6 @@
         }
 
         function actualizarEstado(nuevoEstado, esPanicoDirecto = false) {
-            // Si hay un pánico activo por temporizador y el nuevo estado no es PÁNICO, ignoramos volver a Tranquilo/Concentrado todavía
             if (isPanicHoldActive && !esPanicoDirecto && !forcedPanic) {
                 return;
             }
@@ -177,7 +170,7 @@
                 isPanicHoldActive = true;
                 if (panicTimeout) clearTimeout(panicTimeout);
                 
-                // Mantiene el estado de PÁNICO durante 3 segundos completos (3000ms)
+                // Mantiene el PÁNICO 3 segundos exactos
                 panicTimeout = setTimeout(() => {
                     isPanicHoldActive = false;
                     actualizarEstado("Tranquilo 😌");
@@ -210,47 +203,85 @@
             }
         }
 
-        // DETECCIÓN HIPERSENSIBLE Y ESPASMÓDICA
-        let canvas = document.createElement('canvas');
-        let ctx = canvas.getContext('2d');
-        let lastImageData = null;
-        let lastDiff = 0;
+        // ==========================================
+        // SISTEMA DE IA RECONOCIMIENTO FACIAL REAL
+        // ==========================================
+        let lastNoseY = null;
 
-        setInterval(() => {
+        function dist(p1, p2) {
+            return Math.hypot(p1.x - p2.x, p1.y - p2.y);
+        }
+
+        function onResults(results) {
             if (forcedPanic) return;
 
-            if (video.videoWidth > 0) {
-                canvas.width = 80;
-                canvas.height = 60;
-                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-                let currentData = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
-
-                if (lastImageData) {
-                    let diff = 0;
-                    for (let i = 0; i < currentData.length; i += 16) {
-                        diff += Math.abs(currentData[i] - lastImageData[i]);
-                    }
-
-                    // Calculamos la aceleración o sacudida repentina (cambio brusco entre fotogramas)
-                    let deltaDiff = Math.abs(diff - lastDiff);
-
-                    // --- DETECCIÓN FINA DE ESPASMOS / ESCALOFRIOS / SOBRESALTOS ---
-                    // Se activa si el movimiento supera el umbral ultra-bajo (4500) O si hay una aceleración repentina (deltaDiff > 3500)
-                    if (diff > 4500 || deltaDiff > 3500) {  
-                        actualizarEstado("¡PÁNICO! 😱", true);
-                    } else if (diff > 1800) { 
-                        actualizarEstado("Concentrado 🧐");
-                    } else {
-                        actualizarEstado("Tranquilo 😌");
-                    }
-
-                    lastDiff = diff;
-                }
-                lastImageData = currentData;
+            // SI TE TAPÁS LA CARA O TE TIRÁS TAN ATRÁS QUE LA IA PIERDE EL ROSTRO DE GOLPE -> ¡PÁNICO!
+            if (!results.multiFaceLandmarks || results.multiFaceLandmarks.length === 0) {
+                actualizarEstado("¡PÁNICO! 😱", true);
+                lastNoseY = null;
+                return;
             }
-        }, 100); // Muestreo más rápido (cada 100ms) para no perderse ningún micro-gesto
 
-        startCamera();
+            const landmarks = results.multiFaceLandmarks[0];
+
+            // Puntos clave de la cara:
+            const labioSuperior = landmarks[13];
+            const labioInferior = landmarks[14];
+            const ojoIzquierdoTop = landmarks[159];
+            const ojoIzquierdoBot = landmarks[145];
+            const nariz = landmarks[1];
+
+            // 1. Apertura de boca (Boca abierta de susto)
+            const aperturaBoca = dist(labioSuperior, labioInferior);
+            
+            // 2. Ojos desorbitados
+            const aperturaOjo = dist(ojoIzquierdoTop, ojoIzquierdoBot);
+
+            // 3. Movimiento de espasmo vertical (tirarse para atrás / sobresalto rápido)
+            let espasmo = false;
+            if (lastNoseY !== null) {
+                const diffY = Math.abs(nariz.y - lastNoseY);
+                if (diffY > 0.035) { // Movimiento brusco de cabeza hacia arriba/abajo/atrás
+                    espasmo = true;
+                }
+            }
+            lastNoseY = nariz.y;
+
+            // --- DETECCIÓN DE PÁNICO ULTRA SENSIBLE ---
+            // Se activa si: abrís la boca un poco (0.025), abrís grande los ojos, o hacés un espasmo
+            if (aperturaBoca > 0.025 || aperturaOjo > 0.030 || espasmo) {
+                actualizarEstado("¡PÁNICO! 😱", true);
+            } else if (aperturaBoca > 0.015) {
+                actualizarEstado("Concentrado 🧐");
+            } else {
+                actualizarEstado("Tranquilo 😌");
+            }
+        }
+
+        const faceMesh = new FaceMesh({
+            locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`
+        });
+
+        faceMesh.setOptions({
+            maxNumFaces: 1,
+            refineLandmarks: true,
+            minDetectionConfidence: 0.5,
+            minTrackingConfidence: 0.5
+        });
+
+        faceMesh.onResults(onResults);
+
+        const camera = new Camera(video, {
+            onFrame: async () => {
+                await faceMesh.send({ image: video });
+            },
+            width: 640,
+            height: 480
+        });
+
+        camera.start().then(() => {
+            actualizarEstado("Tranquilo 😌");
+        });
     </script>
 </body>
 </html>
