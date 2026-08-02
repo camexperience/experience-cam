@@ -98,6 +98,10 @@
         let isConnected = false;
         let forcedPanic = false;
         let currentState = "Tranquilo";
+        
+        // Control del temporizador de retención de pánico (3 segundos)
+        let panicTimeout = null;
+        let isPanicHoldActive = false;
 
         async function startCamera() {
             try {
@@ -154,15 +158,32 @@
             if (forcedPanic) {
                 panicBtn.classList.add('active');
                 panicBtn.innerText = "🚨 ¡PÁNICO FORZADO ACTIVADO! 🚨";
-                actualizarEstado("¡PÁNICO! 😱");
+                actualizarEstado("¡PÁNICO! 😱", true);
             } else {
                 panicBtn.classList.remove('active');
                 panicBtn.innerText = "😱 FORZAR PÁNICO (OFF)";
+                isPanicHoldActive = false;
                 actualizarEstado("Tranquilo 😌");
             }
         }
 
-        function actualizarEstado(nuevoEstado) {
+        function actualizarEstado(nuevoEstado, esPanicoDirecto = false) {
+            // Si hay un pánico activo por temporizador y el nuevo estado no es PÁNICO, ignoramos volver a Tranquilo/Concentrado todavía
+            if (isPanicHoldActive && !esPanicoDirecto && !forcedPanic) {
+                return;
+            }
+
+            if (esPanicoDirecto) {
+                isPanicHoldActive = true;
+                if (panicTimeout) clearTimeout(panicTimeout);
+                
+                // Mantiene el estado de PÁNICO durante 3 segundos completos (3000ms)
+                panicTimeout = setTimeout(() => {
+                    isPanicHoldActive = false;
+                    actualizarEstado("Tranquilo 😌");
+                }, 3000);
+            }
+
             currentState = nuevoEstado;
             stateDisplay.innerText = nuevoEstado;
 
@@ -189,10 +210,11 @@
             }
         }
 
-        // BUCLE DE DETECCIÓN DE MOVIMIENTO (Sensibilidad reajustada)
+        // DETECCIÓN HIPERSENSIBLE Y ESPASMÓDICA
         let canvas = document.createElement('canvas');
         let ctx = canvas.getContext('2d');
         let lastImageData = null;
+        let lastDiff = 0;
 
         setInterval(() => {
             if (forcedPanic) return;
@@ -209,18 +231,24 @@
                         diff += Math.abs(currentData[i] - lastImageData[i]);
                     }
 
-                    // --- UMBRALES BAJADOS (Ahora es hiper sensible) ---
-                    if (diff > 25000) {  // Antes 140000 -> Con un pequeño susto o movimiento de cabeza activa PÁNICO
-                        actualizarEstado("¡PÁNICO! 😱");
-                    } else if (diff > 8000) { // Antes 60000 -> Casi cualquier micro-gesto activa Concentrado
+                    // Calculamos la aceleración o sacudida repentina (cambio brusco entre fotogramas)
+                    let deltaDiff = Math.abs(diff - lastDiff);
+
+                    // --- DETECCIÓN FINA DE ESPASMOS / ESCALOFRIOS / SOBRESALTOS ---
+                    // Se activa si el movimiento supera el umbral ultra-bajo (4500) O si hay una aceleración repentina (deltaDiff > 3500)
+                    if (diff > 4500 || deltaDiff > 3500) {  
+                        actualizarEstado("¡PÁNICO! 😱", true);
+                    } else if (diff > 1800) { 
                         actualizarEstado("Concentrado 🧐");
                     } else {
                         actualizarEstado("Tranquilo 😌");
                     }
+
+                    lastDiff = diff;
                 }
                 lastImageData = currentData;
             }
-        }, 150);
+        }, 100); // Muestreo más rápido (cada 100ms) para no perderse ningún micro-gesto
 
         startCamera();
     </script>
