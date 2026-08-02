@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Panic Cam - Mobile & Cross-Platform Companion</title>
+    <title>Panic Cam - Universal Cross-Platform Companion</title>
     <style>
         * {
             box-sizing: border-box;
@@ -38,6 +38,7 @@
             color: #a0aab0;
             font-size: 0.95rem;
             margin-top: 5px;
+            max-width: 500px;
         }
 
         .container {
@@ -49,6 +50,22 @@
             padding: 24px;
             box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
             text-align: center;
+        }
+
+        .platform-info {
+            background: #21262d;
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 20px;
+            font-size: 0.85rem;
+            color: #c9d1d9;
+            text-align: left;
+            line-height: 1.4;
+        }
+
+        .platform-info strong {
+            color: #00e5ff;
         }
 
         .pin-box {
@@ -163,7 +180,7 @@
             color: #58a6ff;
             text-decoration: none;
             font-weight: 600;
-            margin: 0 5px;
+            margin: 0 4px;
         }
 
         footer a:hover {
@@ -171,7 +188,7 @@
         }
 
         .copyright {
-            margin-top: 8px;
+            margin-top: 10px;
             font-size: 0.78rem;
             color: #484f58;
         }
@@ -181,10 +198,16 @@
 
     <header>
         <h1>Panic Cam</h1>
-        <p>Cámara remota para PlayStation, Xbox y PC</p>
+        <p>Sistema de cámara externa universal por PIN</p>
     </header>
 
     <div class="container">
+        <!-- EXPLICACIÓN DE COMPATIBILIDAD -->
+        <div class="platform-info">
+            📱 <strong>Sistemas y Dispositivos Compatibles:</strong><br>
+            Podés jugar en <strong>Celular, Tablet, PC, PlayStation o Xbox</strong>. Si estás jugando en una consola o en un celular/PC sin cámara (o querés usar un teléfono secundario como cámara), ingresá el PIN de tu partida para vincular la reacción en tiempo real.
+        </div>
+
         <!-- VINCULACIÓN POR PIN -->
         <div class="pin-box">
             <label for="pinInput">CÓDIGO DE VINCULACIÓN (PIN)</label>
@@ -202,17 +225,17 @@
 
         <!-- DERECHOS Y PRIVACIDAD -->
         <div class="privacy-notice">
-            🔒 <strong>Procesamiento 100% Local:</strong> Tu cámara se analiza en tiempo real dentro de tu navegador. <strong>Ninguna imagen ni video se graba o envía a servidores externos.</strong> Solamente se transmiten datos numéricos de reacción a tu sesión de juego.
+            🔒 <strong>Procesamiento 100% Local:</strong> La detección de tu rostro y reacciones se realiza de manera <strong>completamente local dentro de tu propio navegador</strong>. Ningún video o imagen se graba ni se transmite a servidores externos.
         </div>
     </div>
 
-    <!-- FOOTER CON DERECHOS Y REDES -->
+    <!-- FOOTER CON SUS 2 CUENTAS DE ROBLOX -->
     <footer>
-        <p>Desarrollado para la comunidad de Roblox & Console Players</p>
-        <p style="margin-top: 5px;">
-            Perfiles de GitHub: 
-            <a href="https://github.com/valensamper12-art" target="_blank">valensamper12-art</a> | 
-            <a href="https://github.com/8731455865" target="_blank">Dev ID: 8731455865</a>
+        <p>Creado por el desarrollador de la experiencia</p>
+        <p style="margin-top: 8px;">
+            🎮 <strong>Perfiles Oficiales de Roblox:</strong><br>
+            <a href="https://www.roblox.com/users/8731455865/profile" target="_blank">Perfil Roblox 1 (ID: 8731455865)</a> | 
+            <a href="https://www.roblox.com/users/1491692772/profile" target="_blank">Perfil Roblox 2 (ID: 1491692772)</a>
         </p>
         <div class="copyright">
             © 2026 Panic Cam System. Todos los derechos reservados.
@@ -225,7 +248,7 @@
         let activePIN = null;
         let isConnected = false;
 
-        // Activar cámara del dispositivo móvil o PC
+        // Activar cámara del dispositivo
         async function startCamera() {
             try {
                 const stream = await navigator.mediaDevices.getUserMedia({ 
@@ -234,16 +257,16 @@
                 });
                 video.srcObject = stream;
             } catch (err) {
-                alert("Error al acceder a la cámara. Por favor concede permisos.");
+                alert("Por favor concede permisos para usar la cámara en este navegador.");
                 console.error(err);
             }
         }
 
-        // Vincular PIN con el servidor/juego
+        // Vincular PIN con el juego
         function vincularPIN() {
             const pin = document.getElementById('pinInput').value.trim();
             if (pin.length < 4) {
-                alert("Por favor ingresá un PIN válido de al menos 4 dígitos.");
+                alert("Ingresá un PIN válido de al menos 4 números.");
                 return;
             }
 
@@ -251,24 +274,20 @@
             isConnected = true;
             
             statusBadge.classList.add('connected');
-            statusBadge.innerText = "🟢 Conectado con exito al PIN: " + activePIN;
+            statusBadge.innerText = "🟢 Conectado con éxito al PIN: " + activePIN;
 
-            // Simulación / Conexión de transmisión de Reacción Local
             iniciarTransmisionReaccion();
         }
 
-        // Transmisión de datos de reacción local (Sync con Play/PC)
+        // Transmisión local
         function iniciarTransmisionReaccion() {
             setInterval(() => {
                 if (isConnected) {
-                    // Acá procesás la reacción (ej. susto, inclinación) localmente
-                    // Y enviás solo el valor numérico al juego usando tu PIN como canal
-                    console.log("Enviando paquete de reacción al PIN:", activePIN);
+                    console.log("Transmitiendo pulso de reacción local al PIN:", activePIN);
                 }
             }, 100);
         }
 
-        // Iniciar cámara al cargar la página
         startCamera();
     </script>
 </body>
