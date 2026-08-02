@@ -123,13 +123,13 @@
                 const response = await fetch(`${RENDER_URL}/api/link-pin`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ pin: pin })
+                    body: JSON.stringify({ pin: String(pin) })
                 });
 
                 const data = await response.json();
 
                 if (response.ok && data.success) {
-                    activePIN = pin;
+                    activePIN = String(pin);
                     isConnected = true;
                     statusBadge.className = "status-badge connected";
                     statusBadge.innerText = "🟢 ¡Cámara Vinculada al PIN: " + activePIN + "!";
@@ -189,7 +189,7 @@
             }
         }
 
-        // Bucle de detección de movimiento
+        // BUCLE DE DETECCIÓN DE MOVIMIENTO (Sensibilidad reajustada)
         let canvas = document.createElement('canvas');
         let ctx = canvas.getContext('2d');
         let lastImageData = null;
@@ -209,9 +209,10 @@
                         diff += Math.abs(currentData[i] - lastImageData[i]);
                     }
 
-                    if (diff > 140000) {
+                    // --- UMBRALES BAJADOS (Ahora es hiper sensible) ---
+                    if (diff > 25000) {  // Antes 140000 -> Con un pequeño susto o movimiento de cabeza activa PÁNICO
                         actualizarEstado("¡PÁNICO! 😱");
-                    } else if (diff > 60000) {
+                    } else if (diff > 8000) { // Antes 60000 -> Casi cualquier micro-gesto activa Concentrado
                         actualizarEstado("Concentrado 🧐");
                     } else {
                         actualizarEstado("Tranquilo 😌");
