@@ -87,7 +87,7 @@
     </footer>
 
     <script>
-        const RENDER_URL = "https://tu-app-en-render.onrender.com"; // 👈 Cambiá esto por tu URL real de Render
+        const RENDER_URL = "https://roblox-cam-backend.onrender.com";
 
         const video = document.getElementById('webcam');
         const statusBadge = document.getElementById('statusBadge');
@@ -133,7 +133,10 @@
                     isConnected = true;
                     statusBadge.className = "status-badge connected";
                     statusBadge.innerText = "🟢 ¡Cámara Vinculada al PIN: " + activePIN + "!";
+                    enviarEstadoAServidor(currentState);
                 } else {
+                    activePIN = null;
+                    isConnected = false;
                     statusBadge.className = "status-badge";
                     statusBadge.style.color = "#ff2a2a";
                     statusBadge.innerText = "❌ PIN incorrecto o inexistente. Intenta de nuevo.";
@@ -168,15 +171,31 @@
             } else {
                 stateDisplay.className = "state-display";
             }
+
+            if (isConnected && activePIN) {
+                enviarEstadoAServidor(nuevoEstado);
+            }
         }
 
-        // Bucle de detección automática menos estricta
+        async function enviarEstadoAServidor(estado) {
+            try {
+                await fetch(`${RENDER_URL}/api/update-state`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ pin: activePIN, state: estado })
+                });
+            } catch (e) {
+                console.error("Error actualizando estado:", e);
+            }
+        }
+
+        // Bucle de detección de movimiento
         let canvas = document.createElement('canvas');
         let ctx = canvas.getContext('2d');
         let lastImageData = null;
 
         setInterval(() => {
-            if (forcedPanic) return; // Si está forzado, no evalúa movimiento
+            if (forcedPanic) return;
 
             if (video.videoWidth > 0) {
                 canvas.width = 80;
@@ -190,10 +209,9 @@
                         diff += Math.abs(currentData[i] - lastImageData[i]);
                     }
 
-                    // Sensibilidad suelta (umbral más bajo)
-                    if (diff > 180000) {
+                    if (diff > 140000) {
                         actualizarEstado("¡PÁNICO! 😱");
-                    } else if (diff > 80000) {
+                    } else if (diff > 60000) {
                         actualizarEstado("Concentrado 🧐");
                     } else {
                         actualizarEstado("Tranquilo 😌");
