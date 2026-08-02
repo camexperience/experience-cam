@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panic Cam - Calibración Equilibrada</title>
+
+    <!-- Google MediaPipe Face Mesh & Camera Utils -->
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js" crossorigin="anonymous"></script>
+
+    <style>
+        :root {
+            --bg-color: #0d0e15;
+            --panel-bg: rgba(22, 24, 38, 0.95);
+            --neon-cyan: #00ffcc;
+            --neon-pink: #ff0055;
+            --neon-yellow: #ffcc00;
+            --text-color: #ffffff;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            background-image: 
+                radial-gradient(circle at 15% 15%, rgba(255, 0, 85, 0.2) 0%, transparent 40%),
+                radial-gradient(circle at 85% 85%, rgba(0, 255, 204, 0.2) 0%, transparent 40%);
+            color: var(--text-color);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 15px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 420px;
+            background: var(--panel-bg);
+            border-radius: 20px;
+            padding: 25px;
+            border: 2px solid var(--neon-cyan);
+            box-shadow: 0 0 25px rgba(0, 255, 204, 0.3), inset 0 0 15px rgba(255, 0, 85, 0.15);
+            backdrop-filter: blur(10px);
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 1.8rem;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: #fff;
+            text-shadow: 0 0 10px var(--neon-cyan), 0 0 20px var(--neon-pink);
+            margin-bottom: 5px;
+        }
+
+        p.subtitle {
+            font-size: 0.85rem;
+            color: #a0a5c0;
+            margin-bottom: 20px;
+        }
+
+        .pin-section {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        input[type="text"] {
+            flex: 1;
+            padding: 12px;
+            border-radius: 10px;
+            border: 2px solid var(--neon-pink);
+            background: #08090d;
+            color: var(--neon-cyan);
+            font-size: 1.2rem;
+            font-weight: bold;
+            text-align: center;
+            letter-spacing: 3px;
+            outline: none;
+            box-shadow: inset 0 0 8px rgba(255, 0, 85, 0.3);
+        }
+
+        button {
+            padding: 12px 20px;
+            border-radius: 10px;
+            border: none;
+            background: linear-gradient(135deg, var(--neon-pink), #b3003b);
+            color: white;
+            font-weight: bold;
+            font-size: 0.9rem;
+            cursor: pointer;
+            text-transform: uppercase;
+            box-shadow: 0 0 15px rgba(255, 0, 85, 0.5);
+            transition: all 0.2s ease;
+        }
+
+        button:active {
+            transform: scale(0.96);
+        }
+
+        .video-wrapper {
+            position: relative;
+            width: 100%;
+            height: 240px;
+            background: #050608;
+            border-radius: 15px;
+            overflow: hidden;
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            margin-bottom: 15px;
+        }
+
+        video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transform: scaleX(-1);
+        }
+
+        .status-badge {
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 8px 18px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 800;
+            letter-spacing: 1px;
+            background: rgba(0, 0, 0, 0.85);
+            border: 2px solid var(--neon-cyan);
+            color: var(--neon-cyan);
+            box-shadow: 0 0 15px var(--neon-cyan);
+            z-index: 10;
+            transition: all 0.15s ease;
+        }
+
+        .status-badge.scared {
+            border-color: var(--neon-pink);
+            color: #fff;
+            background: var(--neon-pink);
+            box-shadow: 0 0 25px var(--neon-pink);
+            animation: pulse 0.2s infinite alternate;
+        }
+
+        @keyframes pulse {
+            0% { transform: translateX(-50%) scale(1); }
+            100% { transform: translateX(-50%) scale(1.12); }
+        }
+
+        .test-btn {
+            width: 100%;
+            background: linear-gradient(135deg, #00ffcc, #0088cc);
+            color: #000;
+            font-weight: 900;
+            margin-bottom: 15px;
+        }
+
+        .info-panel {
+            background: rgba(8, 9, 13, 0.6);
+            border-radius: 12px;
+            padding: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            font-size: 0.85rem;
+            color: #8c93b0;
+        }
+
+        #loading-text {
+            color: var(--neon-yellow);
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>🎉 PANIC CAM</h1>
+    <p class="subtitle">Google FaceMesh - Calibración Balanceada</p>
+
+    <div class="pin-section">
+        <input type="text" id="pinInput" placeholder="PIN ROBLOX" maxlength="6">
+        <button id="connectBtn">VINCULAR</button>
+    </div>
+
+    <div class="video-wrapper">
+        <div id="statusBadge" class="status-badge">📹 INICIANDO CÁMARA...</div>
+        <video id="webcam" playsinline muted></video>
+    </div>
+
+    <button id="testBtn" class="test-btn">🔥 PROBAR PÁNICO (FORZAR MANUAL)</button>
+
+    <div class="info-panel">
+        <span id="loading-text">Cargando Google FaceMesh...</span>
+    </div>
+</div>
+
+<script>
+    const BACKEND_URL = "https://roblox-cam-backend.onrender.com";
+    
+    const video = document.getElementById('webcam');
+    const statusBadge = document.getElementById('statusBadge');
+    const loadingText = document.getElementById('loading-text');
+    const pinInput = document.getElementById('pinInput');
+    const connectBtn = document.getElementById('connectBtn');
+    const testBtn = document.getElementById('testBtn');
+
+    let activePin = null;
+    let isConnected = false;
+    let lastState = false;
+    let lastFaceTime = Date.now();
+
+    // 1. Configurar MediaPipe FaceMesh
+    const faceMesh = new FaceMesh({
+        locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`
+    });
+
+    faceMesh.setOptions({
+        maxNumFaces: 1,
+        refineLandmarks: true,
+        minDetectionConfidence: 0.4,
+        minTrackingConfidence: 0.4
+    });
+
+    faceMesh.onResults(onResults);
+
+    // 2. Procesar Malla Facial con Umbrales Medios
+    function onResults(results) {
+        if (!isConnected || !activePin) return;
+
+        let isScared = false;
+
+        if (results.multiFaceLandmarks && results.multiFaceLandmarks.length > 0) {
+            lastFaceTime = Date.now();
+            const landmarks = results.multiFaceLandmarks[0];
+
+            // Puntos clave de Google FaceMesh
+            const topLip = landmarks[13];
+            const bottomLip = landmarks[14];
+            const eyebrow = landmarks[70];
+            const eye = landmarks[105];
+
+            // Distancias normalizadas
+            const mouthGap = Math.hypot(topLip.x - bottomLip.x, topLip.y - bottomLip.y);
+            const eyebrowGap = Math.hypot(eyebrow.x - eye.x, eyebrow.y - eye.y);
+
+            // CALIBRACIÓN BALANCEADA:
+            // - mouthGap > 0.048: Abre la boca por susto / grito.
+            // - eyebrowGap > 0.09: Levanta las cejas por pánico/sorpresa.
+            if (mouthGap > 0.048 || eyebrowGap > 0.09) {
+                isScared = true;
+            }
+        } else {
+            // SI TE TAPÁS LA BOCA / CARA CON LA MANO:
+            // Tolerancia de 300ms para evitar falsos positivos por parpadeos o cruzar la mano rápido.
+            if (Date.now() - lastFaceTime > 300) {
+                isScared = true;
+            }
+        }
+
+        if (isScared !== lastState) {
+            lastState = isScared;
+            updateUI(isScared);
+            sendStateToBackend(isScared);
+        }
+    }
+
+    // 3. Inicializar Cámara
+    const camera = new Camera(video, {
+        onFrame: async () => {
+            await faceMesh.send({ image: video });
+        },
+        width: 320,
+        height: 240
+    });
+
+    camera.start().then(() => {
+        loadingText.innerText = "✅ Cámara e IA listas. Vinculá tu PIN.";
+        statusBadge.innerText = "🟢 TRANQUILO";
+    }).catch(err => {
+        console.error(err);
+        loadingText.innerText = "❌ Habilitá el acceso a la cámara.";
+        statusBadge.innerText = "❌ SIN CÁMARA";
+    });
+
+    // 4. Vincular
+    connectBtn.addEventListener('click', () => {
+        const pin = pinInput.value.trim();
+        if (pin.length < 4) {
+            alert("Ingresá tu PIN de Roblox.");
+            return;
+        }
+
+        activePin = pin;
+        isConnected = true;
+        loadingText.innerText = "🔗 Conectado al PIN: " + activePin;
+        statusBadge.innerText = "🟢 TRANQUILO";
+        fetch(`${BACKEND_URL}/`).catch(() => {});
+    });
+
+    // 5. Botón de prueba manual
+    testBtn.addEventListener('mousedown', () => {
+        if (!activePin) { alert("Primero vinculá un PIN"); return; }
+        updateUI(true);
+        sendStateToBackend(true);
+    });
+
+    testBtn.addEventListener('mouseup', () => {
+        if (!activePin) return;
+        updateUI(false);
+        sendStateToBackend(false);
+    });
+
+    function updateUI(isScared) {
+        if (isScared) {
+            statusBadge.innerText = "🔴 ¡PÁNICO / REACCIÓN!";
+            statusBadge.classList.add('scared');
+        } else {
+            statusBadge.innerText = "🟢 TRANQUILO";
+            statusBadge.classList.remove('scared');
+        }
+    }
+
+    async function sendStateToBackend(isScared) {
+        try {
+            await fetch(`${BACKEND_URL}/update_status`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    pin: activePin,
+                    is_scared: isScared
+                })
+            });
+        } catch (err) {}
+    }
+</script>
+
+</body>
+</html>
