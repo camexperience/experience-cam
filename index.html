@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PANIC CAM - STRESS MONITOR</title>
+    <title>PANIC CAM - AUTOMATIC DETECTOR</title>
     <style>
         :root {
             --primary-red: #ff2a2a;
@@ -124,13 +124,8 @@
             transition: transform 0.1s, filter 0.2s;
         }
 
-        button:hover {
-            filter: brightness(1.2);
-        }
-
-        button:active {
-            transform: scale(0.98);
-        }
+        button:hover { filter: brightness(1.2); }
+        button:active { transform: scale(0.98); }
 
         .status-msg {
             font-size: 12px;
@@ -138,7 +133,7 @@
             min-height: 16px;
         }
 
-        /* CAM SYSTEM & STRESS MONITOR */
+        /* CAM SYSTEM */
         .cam-wrapper {
             display: none;
             position: relative;
@@ -177,7 +172,23 @@
             border-radius: 4px;
         }
 
-        /* BARRA DE PÁNICO */
+        /* CHEAT WARNING OVERLAY */
+        .cheat-warning {
+            display: none;
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(255, 0, 0, 0.4);
+            color: #fff;
+            font-weight: bold;
+            font-size: 14px;
+            text-align: center;
+            justify-content: center;
+            align-items: center;
+            text-shadow: 0 0 8px #000;
+            letter-spacing: 1px;
+        }
+
+        /* BARRA DE PÁNICO AUTOMÁTICA */
         .stress-section {
             display: none;
             margin-top: 10px;
@@ -198,57 +209,41 @@
         }
 
         .stress-value-text {
-            font-size: 20px;
+            font-size: 22px;
             font-weight: bold;
             color: var(--primary-red);
             text-shadow: 0 0 8px rgba(255, 42, 42, 0.5);
         }
 
-        .slider-wrapper {
-            position: relative;
-            margin-top: 10px;
-        }
-
-        input[type="range"] {
-            width: 100%;
-            height: 14px;
-            -webkit-appearance: none;
-            background: #1a1a22;
-            border-radius: 7px;
-            outline: none;
-            border: 1px solid #333;
-        }
-
-        input[type="range"]::-webkit-slider-thumb {
-            -webkit-appearance: none;
-            appearance: none;
-            width: 26px;
-            height: 26px;
-            border-radius: 50%;
-            background: var(--primary-red);
-            cursor: pointer;
-            box-shadow: 0 0 12px var(--primary-red);
-            border: 2px solid #fff;
-        }
-
         .panic-bar-visual {
             width: 100%;
-            height: 10px;
+            height: 16px;
             background: #1a1a22;
-            border-radius: 5px;
+            border-radius: 8px;
             overflow: hidden;
-            margin-top: 12px;
+            margin-top: 8px;
             border: 1px solid #333;
         }
 
         .panic-bar-fill {
             height: 100%;
             width: 0%;
-            background: linear-gradient(90deg, #f39c12 0%, #ff2a2a 100%);
+            background: linear-gradient(90deg, #2ecc71 0%, #f39c12 50%, #ff2a2a 100%);
             box-shadow: 0 0 10px rgba(255, 42, 42, 0.8);
-            transition: width 0.1s ease-out;
+            transition: width 0.15s linear;
+        }
+
+        .state-description {
+            font-size: 12px;
+            color: #aaa;
+            margin-top: 8px;
+            text-align: center;
         }
     </style>
+
+    <!-- Scripts de MediaPipe para detección facial -->
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js" crossorigin="anonymous"></script>
 </head>
 <body>
 
@@ -256,7 +251,7 @@
     <div class="header">
         <div class="title">
             <div class="rec-dot"></div>
-            PANIC CAM
+            PANIC CAM AI
         </div>
         <div class="timestamp" id="clock">00:00:00</div>
     </div>
@@ -273,35 +268,36 @@
     <div id="camWrapper" class="cam-wrapper">
         <video id="webcam" autoplay playsinline muted></video>
         <div class="cam-hud">
-            <span class="live-tag">● SIGNAL: OK</span>
+            <span class="live-tag">● AI TRACKING</span>
             <span id="camPinTag">PIN: ----</span>
         </div>
+        <div id="cheatWarning" class="cheat-warning">⚠️ ¡CARA NO DETECTADA!<br>PÁNICO AL 100% (ANTI-TRAMPA)</div>
     </div>
 
-    <!-- SECCIÓN 3: CONTROL DE BARRA DE PÁNICO -->
+    <!-- SECCIÓN 3: BARRA DE PÁNICO AUTOMÁTICA -->
     <div id="stressSection" class="stress-section">
         <div class="stress-header">
-            <span class="stress-label">NIVEL DE PÁNICO</span>
+            <span class="stress-label">MEDIDOR DE PÁNICO</span>
             <span id="stressVal" class="stress-value-text">0%</span>
-        </div>
-
-        <div class="slider-wrapper">
-            <input type="range" id="stressSlider" min="0" max="100" value="0" oninput="cambiarEstres(this.value)">
         </div>
 
         <div class="panic-bar-visual">
             <div id="panicFill" class="panic-bar-fill"></div>
         </div>
+
+        <div id="stateDesc" class="state-description">🟢 Estado: Tranquilo</div>
     </div>
 </div>
 
 <script>
-    // URL DE RENDER DIRECTA
     const SERVER_URL = "https://roblox-cam-backend.onrender.com";
 
     let activePin = null;
+    let targetStress = 0;
+    let currentStress = 0;
+    let prevHeadPos = null;
 
-    // Reloj en tiempo real estilo cámara
+    // Reloj en tiempo real
     function updateClock() {
         const now = new Date();
         document.getElementById("clock").innerText = now.toTimeString().split(' ')[0];
@@ -309,18 +305,47 @@
     setInterval(updateClock, 1000);
     updateClock();
 
-    // Activar Cámara Web
-    async function initCamera() {
-        try {
-            const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
-            const videoElem = document.getElementById("webcam");
-            videoElem.srcObject = stream;
-        } catch (err) {
-            console.warn("No se detectó cámara web o acceso denegado:", err);
+    // Bucle continuo para suavizar la barra y enviarla a Render
+    setInterval(() => {
+        if (!activePin) return;
+
+        // Interpolación suave (Lerp) para que la barra no pegue saltos bruscos
+        currentStress += (targetStress - currentStress) * 0.2;
+        const displayVal = Math.round(currentStress);
+
+        document.getElementById("stressVal").innerText = `${displayVal}%`;
+        document.getElementById("panicFill").style.width = `${displayVal}%`;
+
+        const desc = document.getElementById("stateDesc");
+        if (displayVal <= 30) {
+            desc.innerText = "🟢 Estado: Tranquilo";
+            desc.style.color = "#2ecc71";
+        } else if (displayVal <= 60) {
+            desc.innerText = "🟡 Estado: Nervioso / Alerta";
+            desc.style.color = "#f39c12";
+        } else {
+            desc.innerText = "🔴 Estado: PÁNICO TOTAL";
+            desc.style.color = "#ff2a2a";
         }
+
+        // Enviar al servidor Python en Render
+        enviarEstresAlServidor(displayVal);
+    }, 120);
+
+    async function enviarEstresAlServidor(valor) {
+        try {
+            await fetch(`${SERVER_URL}/api/update-state`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    pin: String(activePin),
+                    stress: parseInt(valor)
+                })
+            });
+        } catch (err) {}
     }
 
-    // Vincular PIN con Render
+    // Vincular PIN
     async function conectarServidor() {
         const pinInput = document.getElementById("pinInput");
         const statusMsg = document.getElementById("statusMsg");
@@ -346,46 +371,98 @@
 
             if (response.ok && data.success) {
                 activePin = pin;
-                statusMsg.innerText = "🟢 PIN Vinculado con éxito";
-                statusMsg.style.color = "#00ff66";
+                statusMsg.innerText = "🟢 Conectado con exito";
 
-                // Transición de interfaz
                 document.getElementById("loginSection").style.display = "none";
                 document.getElementById("camWrapper").style.display = "block";
                 document.getElementById("stressSection").style.display = "block";
                 document.getElementById("camPinTag").innerText = `PIN: ${pin}`;
 
-                initCamera();
+                iniciarMediaPipe();
             } else {
-                statusMsg.innerText = `❌ ${data.detail || "PIN incorrecto o expirado"}`;
+                statusMsg.innerText = `❌ ${data.detail || "PIN incorrecto"}`;
                 statusMsg.style.color = "#ff2a2a";
             }
         } catch (error) {
-            console.error("Error:", error);
             statusMsg.innerText = "❌ Error de conexión con Render";
             statusMsg.style.color = "#ff2a2a";
         }
     }
 
-    // Enviar estrés al backend y mover interfaz
-    async function cambiarEstres(valor) {
-        document.getElementById("stressVal").innerText = `${valor}%`;
-        document.getElementById("panicFill").style.width = `${valor}%`;
+    // DISTANCIA MATEMÁTICA ENTRE PUNTOS DE LA CARA
+    function dist(p1, p2) {
+        return Math.hypot(p1.x - p2.x, p1.y - p2.y);
+    }
 
-        if (!activePin) return;
+    // LÓGICA DE PROCESAMIENTO FACIAL
+    function onFaceMeshResults(results) {
+        const cheatOverlay = document.getElementById("cheatWarning");
 
-        try {
-            await fetch(`${SERVER_URL}/api/update-state`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    pin: String(activePin),
-                    stress: parseInt(valor)
-                })
-            });
-        } catch (err) {
-            console.error("Error enviando estrés:", err);
+        -- SI NO SE DETECTA CARA = TRAMPA / PÁNICO 100% --
+        if (!results.multiFaceLandmarks || results.multiFaceLandmarks.length === 0) {
+            targetStress = 100;
+            cheatOverlay.style.display = "flex";
+            prevHeadPos = null;
+            return;
         }
+
+        cheatOverlay.style.display = "none";
+        const lm = results.multiFaceLandmarks[0];
+
+        // Alto total de la cara para normalizar proporciones
+        const altoCara = dist(lm[10], lm[152]);
+        if (!altoCara) return;
+
+        // 1. Boca Abierta (Grito / Susto) - Poco estricto
+        const aperturaBoca = dist(lm[13], lm[14]) / altoCara;
+        let ptsBoca = Math.min(45, Math.max(0, (aperturaBoca - 0.05) * 350));
+
+        // 2. Ojos Desorbitados / Cejas levantadas
+        const ojoIzk = dist(lm[159], lm[145]);
+        const ojoDer = dist(lm[386], lm[374]);
+        const aperturaOjos = ((ojoIzk + ojoDer) / 2) / altoCara;
+        let ptsOjos = Math.min(35, Math.max(0, (aperturaOjos - 0.045) * 400));
+
+        // 3. Movimientos bruscos de la cabeza
+        const centroCara = { x: lm[1].x, y: lm[1].y };
+        let ptsMovimiento = 0;
+        if (prevHeadPos) {
+            const desplazamiento = dist(centroCara, prevHeadPos) / altoCara;
+            ptsMovimiento = Math.min(30, desplazamiento * 150);
+        }
+        prevHeadPos = centroCara;
+
+        // Total calculado (0 a 100)
+        let total = Math.round(ptsBoca + ptsOjos + ptsMovimiento);
+        targetStress = Math.min(100, Math.max(0, total));
+    }
+
+    // INICIALIZACIÓN DE MEDIAPIPE Y CÁMARA
+    function iniciarMediaPipe() {
+        const videoElement = document.getElementById("webcam");
+
+        const faceMesh = new FaceMesh({
+            locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`
+        });
+
+        faceMesh.setOptions({
+            maxNumFaces: 1,
+            refineLandmarks: true,
+            minDetectionConfidence: 0.5,
+            minTrackingConfidence: 0.5
+        });
+
+        faceMesh.onResults(onFaceMeshResults);
+
+        const camera = new Camera(videoElement, {
+            onFrame: async () => {
+                await faceMesh.send({ image: videoElement });
+            },
+            width: 640,
+            height: 480
+        });
+
+        camera.start();
     }
 </script>
 
