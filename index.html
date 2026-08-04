@@ -3,202 +3,207 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Panic Cam - Stress Engine 0-100</title>
+    <title>Panic Cam - Control de Estrés</title>
     <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, sans-serif; }
-        body { background-color: #0e1117; color: #fff; display: flex; flex-direction: column; align-items: center; justify-content: space-between; min-height: 100vh; padding: 20px; }
-        header { text-align: center; margin-bottom: 15px; }
-        header h1 { font-size: 2.2rem; color: #00e5ff; text-shadow: 0 0 10px rgba(0, 229, 255, 0.4); }
-        .container { width: 100%; max-width: 480px; background: #161b22; border: 1px solid #30363d; border-radius: 12px; padding: 20px; text-align: center; box-shadow: 0 8px 24px rgba(0,0,0,0.5); }
-        .pin-box { margin-bottom: 15px; }
-        .pin-box label { display: block; margin-bottom: 6px; font-weight: 600; color: #00e5ff; font-size: 0.9rem; }
-        .pin-input-group { display: flex; gap: 10px; justify-content: center; }
-        input[type="text"] { width: 60%; padding: 10px; border-radius: 8px; border: 1px solid #30363d; background: #0d1117; color: #fff; font-size: 1.1rem; text-align: center; letter-spacing: 3px; font-weight: bold; outline: none; }
-        button { padding: 10px 16px; border-radius: 8px; border: none; background: #238636; color: #fff; font-size: 0.95rem; font-weight: bold; cursor: pointer; }
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
 
-        .status-badge { display: inline-block; padding: 6px 12px; border-radius: 20px; font-size: 0.85rem; font-weight: bold; margin-top: 8px; background: #21262d; color: #8b949e; }
-        .status-badge.connected { background: rgba(46, 160, 67, 0.2); color: #3fb950; border: 1px solid #2ea043; }
+        body {
+            background-color: #121212;
+            color: #ffffff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
 
-        /* MEDIDOR DE ESTRÉS */
-        .stress-container { margin: 15px 0; padding: 15px; border-radius: 8px; background: #0d1117; border: 1px solid #30363d; }
-        .stress-title { font-size: 0.85rem; color: #8b949e; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
-        .stress-value { font-size: 2.2rem; font-weight: 900; color: #3fb950; margin-bottom: 8px; }
-        
-        .progress-bar-bg { width: 100%; height: 16px; background: #21262d; border-radius: 8px; overflow: hidden; border: 1px solid #30363d; }
-        .progress-bar-fill { height: 100%; width: 0%; background: linear-gradient(90deg, #3fb950 0%, #d29922 50%, #f85149 100%); transition: width 0.15s linear; }
+        .container {
+            background-color: #1e1e1e;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+        }
 
-        .state-tag { margin-top: 8px; font-size: 0.9rem; font-weight: bold; color: #8b949e; }
+        h1 {
+            font-size: 22px;
+            margin-bottom: 20px;
+            color: #e54b4b;
+        }
 
-        .video-container { width: 100%; height: 200px; background: #000; border-radius: 8px; overflow: hidden; margin-top: 15px; border: 1px solid #30363d; }
-        video { width: 100%; height: 100%; object-fit: cover; }
+        .input-group {
+            margin-bottom: 20px;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 12px;
+            font-size: 18px;
+            letter-spacing: 4px;
+            text-align: center;
+            border: 2px solid #333;
+            background-color: #2a2a2a;
+            color: #fff;
+            border-radius: 8px;
+            outline: none;
+        }
+
+        input[type="text"]:focus {
+            border-color: #e54b4b;
+        }
+
+        button {
+            width: 100%;
+            padding: 12px;
+            background-color: #e54b4b;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        button:hover {
+            background-color: #c0392b;
+        }
+
+        .status {
+            margin-top: 15px;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .status.connected { color: #2ecc71; }
+        .status.disconnected { color: #e74c3c; }
+
+        .control-panel {
+            display: none;
+            margin-top: 25px;
+            border-top: 1px solid #333;
+            padding-top: 20px;
+        }
+
+        .slider-container {
+            margin: 20px 0;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            accent-color: #e54b4b;
+        }
+
+        .stress-value {
+            font-size: 32px;
+            font-weight: bold;
+            margin-top: 10px;
+            color: #f39c12;
+        }
     </style>
-
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js" crossorigin="anonymous"></script>
 </head>
 <body>
 
-    <header>
-        <h1>Panic Cam</h1>
-        <p>Dynamic Stress Meter (0 - 100)</p>
-    </header>
+<div class="container">
+    <h1>PANIC CAM LINK</h1>
 
-    <div class="container">
-        <div class="pin-box">
-            <label for="pinInput">PIN DE VINCULACIÓN</label>
-            <div class="pin-input-group">
-                <input type="text" id="pinInput" placeholder="EJ: 8731" maxlength="6">
-                <button id="connectBtn" onclick="vincularPIN()">CONECTAR</button>
-            </div>
-            <div id="statusBadge" class="status-badge">Esperando PIN del juego...</div>
+    <!-- FORMULARIO DE CONEXIÓN POR PIN -->
+    <div id="login-section">
+        <div class="input-group">
+            <input type="text" id="pinInput" placeholder="1234" maxlength="4" autocomplete="off">
         </div>
-
-        <div class="stress-container">
-            <div class="stress-title">Nivel de Miedo / Estrés</div>
-            <div id="stressValue" class="stress-value">0%</div>
-            <div class="progress-bar-bg">
-                <div id="progressFill" class="progress-bar-fill"></div>
-            </div>
-            <div id="stateTag" class="state-tag">🟢 Calma</div>
-        </div>
-
-        <div class="video-container">
-            <video id="webcam" autoplay playsinline muted></video>
-        </div>
+        <button onclick="conectarPin()">CONECTAR CON ROBLOX</button>
+        <div id="statusMessage" class="status disconnected">Esperando PIN...</div>
     </div>
 
-    <script>
-        const RENDER_URL = "https://roblox-cam-backend.onrender.com"; // Tu backend de Render
+    <!-- PANEL DE CONTROL UNA VEZ CONECTADO -->
+    <div id="control-section" class="control-panel">
+        <p>Conectado correctamente 🎉</p>
+        <div class="slider-container">
+            <label for="stressSlider">Nivel de Estrés:</label>
+            <input type="range" id="stressSlider" min="0" max="100" value="0" oninput="actualizarEstrés(this.value)">
+            <div id="stressDisplay" class="stress-value">0%</div>
+        </div>
+    </div>
+</div>
 
-        const video = document.getElementById('webcam');
-        const statusBadge = document.getElementById('statusBadge');
-        const stressValueDisplay = document.getElementById('stressValue');
-        const progressFill = document.getElementById('progressFill');
-        const stateTag = document.getElementById('stateTag');
+<script>
+    // CAMBIÁ ESTA URL POR LA DE TU SERVIDOR EN RENDER / NGROK
+    const SERVER_URL = "http://localhost:8000"; 
 
-        let activePIN = null;
-        let isConnected = false;
-        let currentStress = 0;
-        let targetStress = 0;
+    let activePin = null;
 
-        async function vincularPIN() {
-            const pin = document.getElementById('pinInput').value.trim();
-            if (pin.length < 4) return alert("PIN inválido.");
+    async function conectarPin() {
+        const pinInput = document.getElementById("pinInput");
+        const statusMessage = document.getElementById("statusMessage");
+        const rawPin = pinInput.value.trim();
 
-            statusBadge.innerText = "🟡 Conectando...";
-
-            try {
-                const response = await fetch(`${RENDER_URL}/api/link-pin`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ pin: String(pin) })
-                });
-
-                if (response.ok) {
-                    activePIN = String(pin);
-                    isConnected = true;
-                    statusBadge.className = "status-badge connected";
-                    statusBadge.innerText = "🟢 Conectado con PIN: " + activePIN;
-                } else {
-                    statusBadge.innerText = "❌ PIN no encontrado.";
-                }
-            } catch (e) {
-                statusBadge.innerText = "⚠️ Error de conexión.";
-            }
+        if (!rawPin) {
+            statusMessage.innerText = "⚠️ Ingresá un PIN válido";
+            statusMessage.className = "status disconnected";
+            return;
         }
 
-        // Suavizado continuo de estrés (interpolación)
-        setInterval(() => {
-            currentStress += (targetStress - currentStress) * 0.25;
-            const displayVal = Math.round(currentStress);
-            
-            stressValueDisplay.innerText = displayVal + "%";
-            progressFill.style.width = displayVal + "%";
+        statusMessage.innerText = "Conectando...";
+        statusMessage.className = "status";
 
-            if (displayVal <= 30) {
-                stateTag.innerText = "🟢 Calma";
-                stateTag.style.color = "#3fb950";
-            } else if (displayVal <= 60) {
-                stateTag.innerText = "🟡 Nervioso";
-                stateTag.style.color = "#d29922";
+        try {
+            const response = await fetch(`${SERVER_URL}/api/link-pin`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({ pin: String(rawPin) })
+            });
+
+            const data = await response.json();
+
+            if (response.ok && data.success) {
+                activePin = rawPin;
+                statusMessage.innerText = "🟢 PIN Vinculado con Éxito";
+                statusMessage.className = "status connected";
+
+                // Ocultar login y mostrar slider
+                document.getElementById("login-section").style.display = "none";
+                document.getElementById("control-section").style.display = "block";
             } else {
-                stateTag.innerText = "🔴 PÁNiCO";
-                stateTag.style.color = "#f85149";
+                statusMessage.innerText = `❌ ${data.detail || "PIN incorrecto"}`;
+                statusMessage.className = "status disconnected";
             }
-
-            if (isConnected && activePIN) {
-                enviarEstrés(displayVal);
-            }
-        }, 100);
-
-        async function enviarEstrés(stressLevel) {
-            try {
-                await fetch(`${RENDER_URL}/api/update-state`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ pin: activePIN, stress: stressLevel })
-                });
-            } catch (e) {}
+        } catch (error) {
+            console.error("Error:", error);
+            statusMessage.innerText = "❌ Error de conexión con el servidor";
+            statusMessage.className = "status disconnected";
         }
+    }
 
-        let prevHeadPos = null;
-        function dist(p1, p2) { return Math.hypot(p1.x - p2.x, p1.y - p2.y); }
+    async function actualizarEstrés(valor) {
+        document.getElementById("stressDisplay").innerText = `${valor}%`;
 
-        function onResults(results) {
-            if (!results.multiFaceLandmarks || results.multiFaceLandmarks.length === 0) {
-                // Cara tapada o sobresalto fuera de cámara = Miedo máximo
-                targetStress = 100;
-                prevHeadPos = null;
-                return;
-            }
+        if (!activePin) return;
 
-            const lm = results.multiFaceLandmarks[0];
-            const altoCara = dist(lm[10], lm[152]);
-            if (!altoCara) return;
-
-            // 1. Boca abierta (hasta 40 pts de estrés)
-            const ratioBoca = dist(lm[13], lm[14]) / altoCara;
-            let ptsBoca = Math.min(40, Math.max(0, (ratioBoca - 0.03) * 450));
-
-            // 2. Cejas / Ojos desorbitados (hasta 35 pts)
-            const ojoIzk = dist(lm[159], lm[145]);
-            const ojoDer = dist(lm[386], lm[374]);
-            const ratioOjos = ((ojoIzk + ojoDer) / 2) / altoCara;
-            let ptsOjos = Math.min(35, Math.max(0, (ratioOjos - 0.04) * 500));
-
-            // 3. Movimiento de cabeza / Espasmo (hasta 25 pts)
-            const centroCara = { x: lm[1].x, y: lm[1].y };
-            let ptsMov = 0;
-            if (prevHeadPos) {
-                const movRelativo = dist(centroCara, prevHeadPos) / altoCara;
-                ptsMov = Math.min(25, movRelativo * 180);
-            }
-            prevHeadPos = centroCara;
-
-            let totalCalculado = Math.round(ptsBoca + ptsOjos + ptsMov);
-            targetStress = Math.min(100, Math.max(0, totalCalculado));
+        try {
+            await fetch(`${SERVER_URL}/api/update-state`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    pin: String(activePin),
+                    stress: parseInt(valor)
+                })
+            });
+        } catch (error) {
+            console.error("Error al enviar estrés:", error);
         }
+    }
+</script>
 
-        const faceMesh = new FaceMesh({
-            locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`
-        });
-
-        faceMesh.setOptions({
-            maxNumFaces: 1,
-            refineLandmarks: true,
-            minDetectionConfidence: 0.5,
-            minTrackingConfidence: 0.5
-        });
-
-        faceMesh.onResults(onResults);
-
-        const camera = new Camera(video, {
-            onFrame: async () => { await faceMesh.send({ image: video }); },
-            width: 640,
-            height: 480
-        });
-
-        camera.start();
-    </script>
 </body>
 </html>
