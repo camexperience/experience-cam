@@ -3,42 +3,34 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Panic Cam - Precision Edition</title>
+    <title>Panic Cam - Stress Engine 0-100</title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, sans-serif; }
         body { background-color: #0e1117; color: #fff; display: flex; flex-direction: column; align-items: center; justify-content: space-between; min-height: 100vh; padding: 20px; }
         header { text-align: center; margin-bottom: 15px; }
         header h1 { font-size: 2.2rem; color: #00e5ff; text-shadow: 0 0 10px rgba(0, 229, 255, 0.4); }
-        header p { color: #a0aab0; font-size: 0.9rem; margin-top: 4px; }
         .container { width: 100%; max-width: 480px; background: #161b22; border: 1px solid #30363d; border-radius: 12px; padding: 20px; text-align: center; box-shadow: 0 8px 24px rgba(0,0,0,0.5); }
-        .platform-info { background: #21262d; border: 1px solid #30363d; border-radius: 8px; padding: 10px; margin-bottom: 15px; font-size: 0.82rem; color: #c9d1d9; text-align: left; }
         .pin-box { margin-bottom: 15px; }
         .pin-box label { display: block; margin-bottom: 6px; font-weight: 600; color: #00e5ff; font-size: 0.9rem; }
         .pin-input-group { display: flex; gap: 10px; justify-content: center; }
         input[type="text"] { width: 60%; padding: 10px; border-radius: 8px; border: 1px solid #30363d; background: #0d1117; color: #fff; font-size: 1.1rem; text-align: center; letter-spacing: 3px; font-weight: bold; outline: none; }
-        button { padding: 10px 16px; border-radius: 8px; border: none; background: #238636; color: #fff; font-size: 0.95rem; font-weight: bold; cursor: pointer; transition: background 0.2s; }
-        button:hover { background: #2ea043; }
-        
+        button { padding: 10px 16px; border-radius: 8px; border: none; background: #238636; color: #fff; font-size: 0.95rem; font-weight: bold; cursor: pointer; }
+
         .status-badge { display: inline-block; padding: 6px 12px; border-radius: 20px; font-size: 0.85rem; font-weight: bold; margin-top: 8px; background: #21262d; color: #8b949e; }
         .status-badge.connected { background: rgba(46, 160, 67, 0.2); color: #3fb950; border: 1px solid #2ea043; }
 
-        .state-container { margin: 15px 0; padding: 12px; border-radius: 8px; background: #0d1117; border: 1px solid #30363d; }
-        .state-title { font-size: 0.8rem; color: #8b949e; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px; }
-        .state-display { font-size: 1.3rem; font-weight: bold; color: #3fb950; transition: all 0.3s ease; }
-        .state-display.panic { color: #ff2a2a; text-shadow: 0 0 12px rgba(255, 42, 42, 0.6); animation: pulse 0.6s infinite alternate; }
+        /* MEDIDOR DE ESTRÉS */
+        .stress-container { margin: 15px 0; padding: 15px; border-radius: 8px; background: #0d1117; border: 1px solid #30363d; }
+        .stress-title { font-size: 0.85rem; color: #8b949e; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
+        .stress-value { font-size: 2.2rem; font-weight: 900; color: #3fb950; margin-bottom: 8px; }
         
-        @keyframes pulse { from { transform: scale(1); } to { transform: scale(1.05); } }
+        .progress-bar-bg { width: 100%; height: 16px; background: #21262d; border-radius: 8px; overflow: hidden; border: 1px solid #30363d; }
+        .progress-bar-fill { height: 100%; width: 0%; background: linear-gradient(90deg, #3fb950 0%, #d29922 50%, #f85149 100%); transition: width 0.15s linear; }
 
-        .panic-btn { width: 100%; padding: 14px; margin-top: 10px; border-radius: 8px; font-size: 1.1rem; font-weight: 800; border: none; cursor: pointer; background: #30363d; color: #c9d1d9; transition: all 0.3s ease; }
-        .panic-btn.active { background: #ff2a2a; color: #fff; box-shadow: 0 0 20px rgba(255, 42, 42, 0.8); animation: shake 0.3s infinite; }
+        .state-tag { margin-top: 8px; font-size: 0.9rem; font-weight: bold; color: #8b949e; }
 
-        @keyframes shake { 0% { transform: translate(1px, 1px) rotate(0deg); } 20% { transform: translate(-2px, 0px) rotate(-1deg); } 40% { transform: translate(1px, -1px) rotate(1deg); } 60% { transform: translate(-1px, 1px) rotate(0deg); } 80% { transform: translate(2px, 1px) rotate(1deg); } 100% { transform: translate(1px, -2px) rotate(-1deg); } }
-
-        .video-container { width: 100%; height: 220px; background: #000; border-radius: 8px; overflow: hidden; margin-top: 15px; border: 1px solid #30363d; position: relative; }
+        .video-container { width: 100%; height: 200px; background: #000; border-radius: 8px; overflow: hidden; margin-top: 15px; border: 1px solid #30363d; }
         video { width: 100%; height: 100%; object-fit: cover; }
-        
-        footer { margin-top: 20px; text-align: center; font-size: 0.8rem; color: #8b949e; width: 100%; border-top: 1px solid #21262d; padding-top: 12px; }
-        footer a { color: #58a6ff; text-decoration: none; font-weight: 600; margin: 0 4px; }
     </style>
 
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
@@ -48,14 +40,10 @@
 
     <header>
         <h1>Panic Cam</h1>
-        <p>Sistema Universal de Reacción por PIN</p>
+        <p>Dynamic Stress Meter (0 - 100)</p>
     </header>
 
     <div class="container">
-        <div class="platform-info">
-            🎯 <strong>Detección por Proporción Facial Activa.</strong>
-        </div>
-
         <div class="pin-box">
             <label for="pinInput">PIN DE VINCULACIÓN</label>
             <div class="pin-input-group">
@@ -65,52 +53,39 @@
             <div id="statusBadge" class="status-badge">Esperando PIN del juego...</div>
         </div>
 
-        <div class="state-container">
-            <div class="state-title">Estado de la Mente</div>
-            <div id="stateDisplay" class="state-display">Iniciando IA... 🤖</div>
+        <div class="stress-container">
+            <div class="stress-title">Nivel de Miedo / Estrés</div>
+            <div id="stressValue" class="stress-value">0%</div>
+            <div class="progress-bar-bg">
+                <div id="progressFill" class="progress-bar-fill"></div>
+            </div>
+            <div id="stateTag" class="state-tag">🟢 Calma</div>
         </div>
-
-        <button id="panicToggleBtn" class="panic-btn" onclick="toggleForcedPanic()">😱 FORZAR PÁNICO (OFF)</button>
 
         <div class="video-container">
             <video id="webcam" autoplay playsinline muted></video>
         </div>
     </div>
 
-    <footer>
-        <p>Desarrollado por:</p>
-        <p style="margin-top: 6px;">
-            <a href="https://www.roblox.com/users/8731455865/profile" target="_blank">Perfil Roblox 1</a> | 
-            <a href="https://www.roblox.com/users/1491692772/profile" target="_blank">Perfil Roblox 2</a>
-        </p>
-    </footer>
-
     <script>
-        const RENDER_URL = "https://roblox-cam-backend.onrender.com";
+        const RENDER_URL = "https://roblox-cam-backend.onrender.com"; // Tu backend de Render
 
         const video = document.getElementById('webcam');
         const statusBadge = document.getElementById('statusBadge');
-        const stateDisplay = document.getElementById('stateDisplay');
-        const panicBtn = document.getElementById('panicToggleBtn');
-        
+        const stressValueDisplay = document.getElementById('stressValue');
+        const progressFill = document.getElementById('progressFill');
+        const stateTag = document.getElementById('stateTag');
+
         let activePIN = null;
         let isConnected = false;
-        let forcedPanic = false;
-        let currentState = "Tranquilo";
-        
-        let panicTimeout = null;
-        let isPanicHoldActive = false;
+        let currentStress = 0;
+        let targetStress = 0;
 
         async function vincularPIN() {
             const pin = document.getElementById('pinInput').value.trim();
-            if (pin.length < 4) {
-                alert("Por favor ingresá un PIN válido de al menos 4 dígitos.");
-                return;
-            }
+            if (pin.length < 4) return alert("PIN inválido.");
 
-            statusBadge.className = "status-badge";
-            statusBadge.style.color = "#8b949e";
-            statusBadge.innerText = "🟡 Validando PIN con el servidor...";
+            statusBadge.innerText = "🟡 Conectando...";
 
             try {
                 const response = await fetch(`${RENDER_URL}/api/link-pin`, {
@@ -119,142 +94,89 @@
                     body: JSON.stringify({ pin: String(pin) })
                 });
 
-                const data = await response.json();
-
-                if (response.ok && data.success) {
+                if (response.ok) {
                     activePIN = String(pin);
                     isConnected = true;
                     statusBadge.className = "status-badge connected";
-                    statusBadge.innerText = "🟢 ¡Cámara Vinculada al PIN: " + activePIN + "!";
-                    enviarEstadoAServidor(currentState);
+                    statusBadge.innerText = "🟢 Conectado con PIN: " + activePIN;
                 } else {
-                    activePIN = null;
-                    isConnected = false;
-                    statusBadge.className = "status-badge";
-                    statusBadge.style.color = "#ff2a2a";
-                    statusBadge.innerText = "❌ PIN incorrecto o inexistente. Intenta de nuevo.";
+                    statusBadge.innerText = "❌ PIN no encontrado.";
                 }
-            } catch (err) {
-                console.error("Error al conectar con Render:", err);
-                statusBadge.className = "status-badge";
-                statusBadge.style.color = "#ff2a2a";
-                statusBadge.innerText = "⚠️ Error de conexión con el servidor.";
+            } catch (e) {
+                statusBadge.innerText = "⚠️ Error de conexión.";
             }
         }
 
-        function toggleForcedPanic() {
-            forcedPanic = !forcedPanic;
-            if (forcedPanic) {
-                panicBtn.classList.add('active');
-                panicBtn.innerText = "🚨 ¡PÁNICO FORZADO ACTIVADO! 🚨";
-                actualizarEstado("¡PÁNICO! 😱", true);
+        // Suavizado continuo de estrés (interpolación)
+        setInterval(() => {
+            currentStress += (targetStress - currentStress) * 0.25;
+            const displayVal = Math.round(currentStress);
+            
+            stressValueDisplay.innerText = displayVal + "%";
+            progressFill.style.width = displayVal + "%";
+
+            if (displayVal <= 30) {
+                stateTag.innerText = "🟢 Calma";
+                stateTag.style.color = "#3fb950";
+            } else if (displayVal <= 60) {
+                stateTag.innerText = "🟡 Nervioso";
+                stateTag.style.color = "#d29922";
             } else {
-                panicBtn.classList.remove('active');
-                panicBtn.innerText = "😱 FORZAR PÁNICO (OFF)";
-                isPanicHoldActive = false;
-                actualizarEstado("Tranquilo 😌");
-            }
-        }
-
-        function actualizarEstado(nuevoEstado, esPanicoDirecto = false) {
-            if (isPanicHoldActive && !esPanicoDirecto && !forcedPanic) {
-                return;
-            }
-
-            if (esPanicoDirecto) {
-                isPanicHoldActive = true;
-                if (panicTimeout) clearTimeout(panicTimeout);
-                
-                panicTimeout = setTimeout(() => {
-                    isPanicHoldActive = false;
-                    actualizarEstado("Tranquilo 😌");
-                }, 3000);
-            }
-
-            currentState = nuevoEstado;
-            stateDisplay.innerText = nuevoEstado;
-
-            if (nuevoEstado.includes("PÁNICO")) {
-                stateDisplay.className = "state-display panic";
-            } else {
-                stateDisplay.className = "state-display";
+                stateTag.innerText = "🔴 PÁNiCO";
+                stateTag.style.color = "#f85149";
             }
 
             if (isConnected && activePIN) {
-                enviarEstadoAServidor(nuevoEstado);
+                enviarEstrés(displayVal);
             }
-        }
+        }, 100);
 
-        async function enviarEstadoAServidor(estado) {
+        async function enviarEstrés(stressLevel) {
             try {
                 await fetch(`${RENDER_URL}/api/update-state`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ pin: activePIN, state: estado })
+                    body: JSON.stringify({ pin: activePIN, stress: stressLevel })
                 });
-            } catch (e) {
-                console.error("Error actualizando estado:", e);
-            }
+            } catch (e) {}
         }
 
-        // ==========================================
-        // DETECCIÓN BASADA EN PROPORCIONES RELATIVAS
-        // ==========================================
         let prevHeadPos = null;
-
-        function dist(p1, p2) {
-            return Math.hypot(p1.x - p2.x, p1.y - p2.y);
-        }
+        function dist(p1, p2) { return Math.hypot(p1.x - p2.x, p1.y - p2.y); }
 
         function onResults(results) {
-            if (forcedPanic) return;
-
-            // Si tapás la cara con las manos o desaparece por el susto -> Pánico inmediato
             if (!results.multiFaceLandmarks || results.multiFaceLandmarks.length === 0) {
-                actualizarEstado("¡PÁNICO! 😱", true);
+                // Cara tapada o sobresalto fuera de cámara = Miedo máximo
+                targetStress = 100;
                 prevHeadPos = null;
                 return;
             }
 
             const lm = results.multiFaceLandmarks[0];
+            const altoCara = dist(lm[10], lm[152]);
+            if (!altoCara) return;
 
-            // 1. Calculamos el tamaño relativo de la cara (Distancia entre mentón y frente)
-            const altoCara = dist(lm[10], lm[152]); 
-            if (altoCara === 0) return;
+            // 1. Boca abierta (hasta 40 pts de estrés)
+            const ratioBoca = dist(lm[13], lm[14]) / altoCara;
+            let ptsBoca = Math.min(40, Math.max(0, (ratioBoca - 0.03) * 450));
 
-            // 2. Proporción de apertura de boca relativa a la cara
-            const aperturaBocaAbsoluta = dist(lm[13], lm[14]);
-            const ratioBoca = aperturaBocaAbsoluta / altoCara;
-
-            // 3. Proporción de ojos desorbitados (promedio ambos ojos)
+            // 2. Cejas / Ojos desorbitados (hasta 35 pts)
             const ojoIzk = dist(lm[159], lm[145]);
             const ojoDer = dist(lm[386], lm[374]);
             const ratioOjos = ((ojoIzk + ojoDer) / 2) / altoCara;
+            let ptsOjos = Math.min(35, Math.max(0, (ratioOjos - 0.04) * 500));
 
-            // 4. Espasmo / Sacudida brusca de cabeza (velocidad de traslación del centro facial)
-            const centroCaraActual = { x: lm[1].x, y: lm[1].y };
-            let espasmoBrusco = false;
-
+            // 3. Movimiento de cabeza / Espasmo (hasta 25 pts)
+            const centroCara = { x: lm[1].x, y: lm[1].y };
+            let ptsMov = 0;
             if (prevHeadPos) {
-                const desplazamiento = dist(centroCaraActual, prevHeadPos) / altoCara;
-                // Si el desplazamiento de la cara supera el 18% del tamaño de tu rostro en 1 frame
-                if (desplazamiento > 0.18) {
-                    espasmoBrusco = true;
-                }
+                const movRelativo = dist(centroCara, prevHeadPos) / altoCara;
+                ptsMov = Math.min(25, movRelativo * 180);
             }
-            prevHeadPos = centroCaraActual;
+            prevHeadPos = centroCara;
 
-            // --- REGLAS DE ACTIVACIÓN SENSIBLES Y PRECISAS ---
-            // ratioBoca > 0.12 = Abrir boca en gesto de susto/sorpresa
-            // ratioOjos > 0.10 = Abrir grande los ojos
-            // espasmoBrusco = Sacudida o tirarse para atrás de golpe
-            if (ratioBoca > 0.12 || ratioOjos > 0.10 || espasmoBrusco) {
-                actualizarEstado("¡PÁNICO! 😱", true);
-            } else if (ratioBoca > 0.07) {
-                actualizarEstado("Concentrado 🧐");
-            } else {
-                actualizarEstado("Tranquilo 😌");
-            }
+            let totalCalculado = Math.round(ptsBoca + ptsOjos + ptsMov);
+            targetStress = Math.min(100, Math.max(0, totalCalculado));
         }
 
         const faceMesh = new FaceMesh({
@@ -271,16 +193,12 @@
         faceMesh.onResults(onResults);
 
         const camera = new Camera(video, {
-            onFrame: async () => {
-                await faceMesh.send({ image: video });
-            },
+            onFrame: async () => { await faceMesh.send({ image: video }); },
             width: 640,
             height: 480
         });
 
-        camera.start().then(() => {
-            actualizarEstado("Tranquilo 😌");
-        });
+        camera.start();
     </script>
 </body>
 </html>
