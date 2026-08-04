@@ -3,204 +3,388 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Panic Cam - Control de Estrés</title>
+    <title>PANIC CAM - STRESS MONITOR</title>
     <style>
+        :root {
+            --primary-red: #ff2a2a;
+            --bg-dark: #0a0a0c;
+            --panel-bg: #121318;
+            --text-main: #e0e0e0;
+        }
+
         * {
             box-sizing: border-box;
             margin: 0;
             padding: 0;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: 'Courier New', Courier, monospace, sans-serif;
         }
 
         body {
-            background-color: #121212;
-            color: #ffffff;
+            background-color: var(--bg-dark);
+            color: var(--text-main);
             display: flex;
             justify-content: center;
             align-items: center;
             min-height: 100vh;
+            overflow: hidden;
         }
 
-        .container {
-            background-color: #1e1e1e;
-            padding: 30px;
-            border-radius: 12px;
-            box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+        .screen-container {
             width: 100%;
-            max-width: 400px;
+            max-width: 480px;
+            background: var(--panel-bg);
+            border: 2px solid #2a2c35;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 0 30px rgba(255, 0, 0, 0.15);
+            position: relative;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #2a2c35;
+            padding-bottom: 10px;
+            margin-bottom: 15px;
+        }
+
+        .title {
+            color: var(--primary-red);
+            font-size: 18px;
+            font-weight: bold;
+            letter-spacing: 2px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .rec-dot {
+            width: 12px;
+            height: 12px;
+            background-color: var(--primary-red);
+            border-radius: 50%;
+            animation: blink 1s infinite;
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.2; }
+        }
+
+        .timestamp {
+            font-size: 11px;
+            color: #888;
+        }
+
+        /* LOGIN / PIN SCREEN */
+        .pin-overlay {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
             text-align: center;
+            margin: 20px 0;
         }
 
-        h1 {
-            font-size: 22px;
-            margin-bottom: 20px;
-            color: #e54b4b;
-        }
-
-        .input-group {
-            margin-bottom: 20px;
+        .pin-overlay p {
+            font-size: 13px;
+            color: #aaa;
         }
 
         input[type="text"] {
             width: 100%;
-            padding: 12px;
-            font-size: 18px;
-            letter-spacing: 4px;
+            padding: 14px;
+            font-size: 24px;
+            letter-spacing: 8px;
             text-align: center;
             border: 2px solid #333;
-            background-color: #2a2a2a;
-            color: #fff;
+            background-color: #050507;
+            color: var(--primary-red);
             border-radius: 8px;
             outline: none;
+            font-weight: bold;
         }
 
         input[type="text"]:focus {
-            border-color: #e54b4b;
+            border-color: var(--primary-red);
+            box-shadow: 0 0 10px rgba(255, 42, 42, 0.3);
         }
 
         button {
             width: 100%;
-            padding: 12px;
-            background-color: #e54b4b;
+            padding: 14px;
+            background: linear-gradient(180deg, #ff2a2a 0%, #a80000 100%);
             color: white;
             border: none;
             border-radius: 8px;
-            font-size: 16px;
+            font-size: 15px;
             font-weight: bold;
+            letter-spacing: 1px;
             cursor: pointer;
-            transition: background 0.2s;
+            transition: transform 0.1s, filter 0.2s;
         }
 
         button:hover {
-            background-color: #c0392b;
+            filter: brightness(1.2);
         }
 
-        .status {
-            margin-top: 15px;
-            font-size: 14px;
-            font-weight: 500;
+        button:active {
+            transform: scale(0.98);
         }
 
-        .status.connected { color: #2ecc71; }
-        .status.disconnected { color: #e74c3c; }
+        .status-msg {
+            font-size: 12px;
+            color: #777;
+            min-height: 16px;
+        }
 
-        .control-panel {
+        /* CAM SYSTEM & STRESS MONITOR */
+        .cam-wrapper {
             display: none;
-            margin-top: 25px;
-            border-top: 1px solid #333;
-            padding-top: 20px;
+            position: relative;
+            width: 100%;
+            height: 260px;
+            background-color: #000;
+            border-radius: 8px;
+            overflow: hidden;
+            border: 1px solid #333;
+            margin-bottom: 20px;
         }
 
-        .slider-container {
-            margin: 20px 0;
+        video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transform: scaleX(-1); /* Espejo para webcam */
+        }
+
+        .cam-hud {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            right: 10px;
+            display: flex;
+            justify-content: space-between;
+            pointer-events: none;
+            font-size: 11px;
+            color: #00ff66;
+            text-shadow: 0 0 4px #000;
+        }
+
+        .cam-hud .live-tag {
+            background: rgba(0,0,0,0.6);
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+
+        /* BARRA DE PÁNICO */
+        .stress-section {
+            display: none;
+            margin-top: 10px;
+        }
+
+        .stress-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .stress-label {
+            font-size: 14px;
+            font-weight: bold;
+            color: #ddd;
+            letter-spacing: 1px;
+        }
+
+        .stress-value-text {
+            font-size: 20px;
+            font-weight: bold;
+            color: var(--primary-red);
+            text-shadow: 0 0 8px rgba(255, 42, 42, 0.5);
+        }
+
+        .slider-wrapper {
+            position: relative;
+            margin-top: 10px;
         }
 
         input[type="range"] {
             width: 100%;
-            accent-color: #e54b4b;
+            height: 14px;
+            -webkit-appearance: none;
+            background: #1a1a22;
+            border-radius: 7px;
+            outline: none;
+            border: 1px solid #333;
         }
 
-        .stress-value {
-            font-size: 32px;
-            font-weight: bold;
-            margin-top: 10px;
-            color: #f39c12;
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            background: var(--primary-red);
+            cursor: pointer;
+            box-shadow: 0 0 12px var(--primary-red);
+            border: 2px solid #fff;
+        }
+
+        .panic-bar-visual {
+            width: 100%;
+            height: 10px;
+            background: #1a1a22;
+            border-radius: 5px;
+            overflow: hidden;
+            margin-top: 12px;
+            border: 1px solid #333;
+        }
+
+        .panic-bar-fill {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #f39c12 0%, #ff2a2a 100%);
+            box-shadow: 0 0 10px rgba(255, 42, 42, 0.8);
+            transition: width 0.1s ease-out;
         }
     </style>
 </head>
 <body>
 
-<div class="container">
-    <h1>PANIC CAM LINK</h1>
-
-    <!-- FORMULARIO DE CONEXIÓN POR PIN -->
-    <div id="login-section">
-        <div class="input-group">
-            <input type="text" id="pinInput" placeholder="1234" maxlength="4" autocomplete="off">
+<div class="screen-container">
+    <div class="header">
+        <div class="title">
+            <div class="rec-dot"></div>
+            PANIC CAM
         </div>
-        <button onclick="conectarPin()">CONECTAR CON ROBLOX</button>
-        <div id="statusMessage" class="status disconnected">Esperando PIN...</div>
+        <div class="timestamp" id="clock">00:00:00</div>
     </div>
 
-    <!-- PANEL DE CONTROL UNA VEZ CONECTADO -->
-    <div id="control-section" class="control-panel">
-        <p>Conectado correctamente 🎉</p>
-        <div class="slider-container">
-            <label for="stressSlider">Nivel de Estrés:</label>
-            <input type="range" id="stressSlider" min="0" max="100" value="0" oninput="actualizarEstrés(this.value)">
-            <div id="stressDisplay" class="stress-value">0%</div>
+    <!-- SECCIÓN 1: VINCULAR CON PIN -->
+    <div id="loginSection" class="pin-overlay">
+        <p>INGRESA EL PIN GENERADO EN ROBLOX</p>
+        <input type="text" id="pinInput" placeholder="0000" maxlength="4" autocomplete="off">
+        <button onclick="conectarServidor()">VINCULAR CÁMARA</button>
+        <div id="statusMsg" class="status-msg">Esperando conexión...</div>
+    </div>
+
+    <!-- SECCIÓN 2: CÁMARA EN VIVO -->
+    <div id="camWrapper" class="cam-wrapper">
+        <video id="webcam" autoplay playsinline muted></video>
+        <div class="cam-hud">
+            <span class="live-tag">● SIGNAL: OK</span>
+            <span id="camPinTag">PIN: ----</span>
+        </div>
+    </div>
+
+    <!-- SECCIÓN 3: CONTROL DE BARRA DE PÁNICO -->
+    <div id="stressSection" class="stress-section">
+        <div class="stress-header">
+            <span class="stress-label">NIVEL DE PÁNICO</span>
+            <span id="stressVal" class="stress-value-text">0%</span>
+        </div>
+
+        <div class="slider-wrapper">
+            <input type="range" id="stressSlider" min="0" max="100" value="0" oninput="cambiarEstres(this.value)">
+        </div>
+
+        <div class="panic-bar-visual">
+            <div id="panicFill" class="panic-bar-fill"></div>
         </div>
     </div>
 </div>
 
 <script>
-    // CAMBIÁ ESTA URL POR LA DE TU SERVIDOR EN RENDER / NGROK
-    const SERVER_URL = "https://roblox-cam-backend.onrender.com"; 
+    // 🔴 REEMPLAZÁ CON TU URL DE RENDER (Sin barra "/" al final)
+    const SERVER_URL = "https://tu-app.onrender.com";
 
     let activePin = null;
 
-    async function conectarPin() {
-        const pinInput = document.getElementById("pinInput");
-        const statusMessage = document.getElementById("statusMessage");
-        const rawPin = pinInput.value.trim();
+    // Reloj en tiempo real estilo cámara
+    function updateClock() {
+        const now = new Date();
+        document.getElementById("clock").innerText = now.toTimeString().split(' ')[0];
+    }
+    setInterval(updateClock, 1000);
+    updateClock();
 
-        if (!rawPin) {
-            statusMessage.innerText = "⚠️ Ingresá un PIN válido";
-            statusMessage.className = "status disconnected";
+    // Activar Cámara Web
+    async function initCamera() {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+            const videoElem = document.getElementById("webcam");
+            videoElem.srcObject = stream;
+        } catch (err) {
+            console.warn("No se detectó cámara web o acceso denegado:", err);
+        }
+    }
+
+    // Vincular PIN con el backend
+    async function conectarServidor() {
+        const pinInput = document.getElementById("pinInput");
+        const statusMsg = document.getElementById("statusMsg");
+        const pin = pinInput.value.trim();
+
+        if (!pin) {
+            statusMsg.innerText = "⚠️ Ingresá un PIN válido";
+            statusMsg.style.color = "#ff2a2a";
             return;
         }
 
-        statusMessage.innerText = "Conectando...";
-        statusMessage.className = "status";
+        statusMsg.innerText = "Conectando con Render...";
+        statusMsg.style.color = "#f39c12";
 
         try {
             const response = await fetch(`${SERVER_URL}/api/link-pin`, {
                 method: "POST",
-                headers: {
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify({ pin: String(rawPin) })
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ pin: String(pin) })
             });
 
             const data = await response.json();
 
             if (response.ok && data.success) {
-                activePin = rawPin;
-                statusMessage.innerText = "🟢 PIN Vinculado con Éxito";
-                statusMessage.className = "status connected";
+                activePin = pin;
+                statusMsg.innerText = "🟢 PIN Vinculado con éxito";
+                statusMsg.style.color = "#00ff66";
 
-                // Ocultar login y mostrar slider
-                document.getElementById("login-section").style.display = "none";
-                document.getElementById("control-section").style.display = "block";
+                // Transición de interfaz
+                document.getElementById("loginSection").style.display = "none";
+                document.getElementById("camWrapper").style.display = "block";
+                document.getElementById("stressSection").style.display = "block";
+                document.getElementById("camPinTag").innerText = `PIN: ${pin}`;
+
+                initCamera();
             } else {
-                statusMessage.innerText = `❌ ${data.detail || "PIN incorrecto"}`;
-                statusMessage.className = "status disconnected";
+                statusMsg.innerText = `❌ ${data.detail || "PIN incorrecto o expirado"}`;
+                statusMsg.style.color = "#ff2a2a";
             }
         } catch (error) {
             console.error("Error:", error);
-            statusMessage.innerText = "❌ Error de conexión con el servidor";
-            statusMessage.className = "status disconnected";
+            statusMsg.innerText = "❌ Error de conexión con Render";
+            statusMsg.style.color = "#ff2a2a";
         }
     }
 
-    async function actualizarEstrés(valor) {
-        document.getElementById("stressDisplay").innerText = `${valor}%`;
+    // Enviar estrés al backend y mover interfaz
+    async function cambiarEstres(valor) {
+        document.getElementById("stressVal").innerText = `${valor}%`;
+        document.getElementById("panicFill").style.width = `${valor}%`;
 
         if (!activePin) return;
 
         try {
             await fetch(`${SERVER_URL}/api/update-state`, {
                 method: "POST",
-                headers: {
-                    "Content-Type": "application/json"
-                },
+                headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     pin: String(activePin),
                     stress: parseInt(valor)
                 })
             });
-        } catch (error) {
-            console.error("Error al enviar estrés:", error);
+        } catch (err) {
+            console.error("Error enviando estrés:", err);
         }
     }
 </script>
