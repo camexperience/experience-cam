@@ -155,7 +155,7 @@
             width: 100%;
             height: 100%;
             object-fit: cover;
-            transform: scaleX(-1); /* Espejo para webcam */
+            transform: scaleX(-1);
         }
 
         .cam-hud {
@@ -296,7 +296,7 @@
 </div>
 
 <script>
-    // 🔴 REEMPLAZÁ CON TU URL DE RENDER (Sin barra "/" al final)
+    // URL DE RENDER DIRECTA
     const SERVER_URL = "https://roblox-cam-backend.onrender.com";
 
     let activePin = null;
@@ -320,7 +320,7 @@
         }
     }
 
-    // Vincular PIN con el backend
+    // Vincular PIN con Render
     async function conectarServidor() {
         const pinInput = document.getElementById("pinInput");
         const statusMsg = document.getElementById("statusMsg");
